@@ -109,14 +109,38 @@ AnalysisResult SemanticAnalyzer::analyze(
 
     for (const auto& item : statement.order_by) {
         analyzeExpr(
-            item.expr.get(),
-            statement,
-            schema,
-            result);
+        item.expr.get(),
+        statement,
+        schema,
+        result);
     }
 
     validateGroupBy(statement, result);
 
+    bool aggregate_query = !statement.group_by.empty();
+
+    if (!aggregate_query) {
+    for (const auto& item : statement.select_items) {
+        if (containsAggregateFunction(item.expr.get())) {
+            aggregate_query = true;
+            break;
+        }
+      }
+    }
+
+    if (aggregate_query) {
+        for (const auto& item : statement.order_by) {
+        if (!isValidGroupedExpression(
+                item.expr.get(),
+                statement)) {
+
+            result.valid = false;
+            result.errors.push_back(
+                "ORDER BY expression contains a column that must appear "
+                "in GROUP BY or be used in an aggregate function.");
+            }
+        }
+    }
     return result;
 }
 

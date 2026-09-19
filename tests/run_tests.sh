@@ -159,6 +159,12 @@ run_test "Multiple ORDER BY" \
 run_test "Aggregate expression GROUP BY" \
     "SELECT SUM(amount) + 10 FROM orders GROUP BY user_id;"
 
+run_test "Aggregate ORDER BY" \
+    "SELECT name, COUNT(id) FROM users GROUP BY name ORDER BY COUNT(id);"
+
+run_test "Grouped ORDER BY" \
+    "SELECT name, COUNT(id) FROM users GROUP BY name ORDER BY name;"
+
 # ============================================================
 # Negative semantic tests
 # ============================================================
@@ -214,6 +220,14 @@ run_negative_test "HAVING column without GROUP BY" \
 run_negative_test "HAVING mixed aggregate and column without GROUP BY" \
     "SELECT COUNT(id) FROM users HAVING COUNT(id) > 1 AND name = 'Alice';" \
     "HAVING expression contains a column that must appear in GROUP BY or be used in an aggregate function."
+
+run_negative_test "Ungrouped ORDER BY column" \
+    "SELECT name, COUNT(id) FROM users GROUP BY name ORDER BY email;" \
+    "ORDER BY expression contains a column that must appear in GROUP BY or be used in an aggregate function."
+
+run_negative_test "Ungrouped ORDER BY expression" \
+    "SELECT name, COUNT(id) FROM users GROUP BY name ORDER BY email + 1;" \
+    "ORDER BY expression contains a column that must appear in GROUP BY or be used in an aggregate function."
 # ============================================================
 # Summary
 # ============================================================
