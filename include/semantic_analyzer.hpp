@@ -61,6 +61,10 @@ private:
         const Expr* expr,
         const SelectStatement& statement) const;
 
+    bool isSelectAlias(
+        const Expr* expr,
+        const SelectStatement& statement) const;
+
     void validateGroupBy(
         const SelectStatement& statement,
         AnalysisResult& result) const;

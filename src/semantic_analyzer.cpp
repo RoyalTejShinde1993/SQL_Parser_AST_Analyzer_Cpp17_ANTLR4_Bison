@@ -108,11 +108,13 @@ AnalysisResult SemanticAnalyzer::analyze(
     }
 
     for (const auto& item : statement.order_by) {
-        analyzeExpr(
-        item.expr.get(),
-        statement,
-        schema,
-        result);
+        if (!isSelectAlias(item.expr.get(), statement)) {
+            analyzeExpr(
+                item.expr.get(),
+                statement,
+                schema,
+                result);
+        }
     }
 
     validateGroupBy(statement, result);
@@ -557,6 +559,27 @@ bool SemanticAnalyzer::isValidGroupedExpression(
     return true;
 }
 
+bool SemanticAnalyzer::isSelectAlias(
+    const Expr* expr,
+    const SelectStatement& statement) const
+{
+    const auto* column =
+        dynamic_cast<const ColumnRef*>(expr);
+
+    if (!column || !column->table.empty()) {
+        return false;
+    }
+
+    for (const auto& item : statement.select_items) {
+        if (!item.alias.empty() &&
+            item.alias == column->column) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 bool SemanticAnalyzer::isValidOrderByExpression(
     const Expr* expr,
     const SelectStatement& statement) const
@@ -585,6 +608,23 @@ bool SemanticAnalyzer::isValidOrderByExpression(
         }
         catch (...) {
             // Not an integer positional reference.
+        }
+    }
+
+    const auto* column =
+        dynamic_cast<const ColumnRef*>(expr);
+
+    if (column &&
+        column->table.empty()) {
+
+        for (const auto& item : statement.select_items) {
+            if (!item.alias.empty() &&
+                item.alias == column->column) {
+
+                return isValidGroupedExpression(
+                    item.expr.get(),
+                    statement);
+            }
         }
     }
 

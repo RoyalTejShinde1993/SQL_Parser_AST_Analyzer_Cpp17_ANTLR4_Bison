@@ -162,12 +162,20 @@ run_test "Aggregate ORDER BY" \
 run_test "Grouped ORDER BY" \
     "SELECT name, COUNT(id) FROM users GROUP BY name ORDER BY name;"
 
-
 run_test "ORDER BY position" \
     "SELECT name, COUNT(id) FROM users GROUP BY name ORDER BY 1;"
 
 run_test "ORDER BY aggregate position" \
     "SELECT name, COUNT(id) FROM users GROUP BY name ORDER BY 2 DESC;"
+
+run_test "ORDER BY alias" \
+    "SELECT name AS username FROM users ORDER BY username;"
+
+run_test "Aggregate ORDER BY alias" \
+    "SELECT name AS username, COUNT(id) AS total FROM users GROUP BY name ORDER BY total DESC;"
+
+run_test "Grouped ORDER BY alias" \
+    "SELECT name AS username, COUNT(id) AS total FROM users GROUP BY name ORDER BY username;"
 # ============================================================
 # Negative semantic tests
 # ============================================================
@@ -239,6 +247,11 @@ run_negative_test "ORDER BY invalid position zero" \
 run_negative_test "ORDER BY invalid position too large" \
     "SELECT name, COUNT(id) FROM users GROUP BY name ORDER BY 3;" \
     "ORDER BY expression contains a column that must appear in GROUP BY or be used in an aggregate function."
+
+run_negative_test "Unknown ORDER BY alias" \
+    "SELECT name AS username, COUNT(id) FROM users GROUP BY name ORDER BY missing_alias;" \
+    "ORDER BY expression contains a column that must appear in GROUP BY or be used in an aggregate function."
+
 # ============================================================
 # Summary
 # ============================================================
