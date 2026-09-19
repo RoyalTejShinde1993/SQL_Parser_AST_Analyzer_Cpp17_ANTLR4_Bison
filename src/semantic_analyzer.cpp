@@ -504,6 +504,17 @@ void SemanticAnalyzer::validateGroupBy(
         result.errors.push_back(
             "Expression contains a column that must appear "
             "in GROUP BY or be used in an aggregate function.");
+        }
+
+    if (statement.having &&
+        !isValidGroupedExpression(
+            statement.having.get(),
+            statement)) {
+
+        result.valid = false;
+        result.errors.push_back(
+            "HAVING expression contains a column that must appear "
+            "in GROUP BY or be used in an aggregate function.");
     }
 }
 

@@ -111,6 +111,12 @@ run_test "GROUP BY" \
 run_test "HAVING" \
     "SELECT name, COUNT(id) FROM users GROUP BY name HAVING COUNT(id) > 1;"
 
+run_test "HAVING grouped column" \
+    "SELECT name, COUNT(id) FROM users GROUP BY name HAVING name = 'Alice';"
+
+run_test "HAVING aggregate expression" \
+    "SELECT name, COUNT(id) FROM users GROUP BY name HAVING COUNT(id) + 1 > 2;"
+
 run_test "MIN" \
     "SELECT MIN(id) FROM users;"
 
@@ -185,6 +191,10 @@ run_negative_test "Ungrouped SELECT column" \
 run_negative_test "Ungrouped column with expression" \
     "SELECT id + 1, email, COUNT(id) FROM users GROUP BY id;" \
     "Column 'email' must appear in GROUP BY or be used in an aggregate function."
+
+run_negative_test "HAVING ungrouped column" \
+    "SELECT name, COUNT(id) FROM users GROUP BY name HAVING email = 'x';" \
+    "HAVING expression contains a column that must appear in GROUP BY or be used in an aggregate function."
 
 # ============================================================
 # Summary
