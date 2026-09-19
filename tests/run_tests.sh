@@ -135,6 +135,15 @@ run_test "Multiple GROUP BY columns" \
 run_test "Qualified GROUP BY" \
     "SELECT users.name, COUNT(users.id) FROM users GROUP BY users.name;"
 
+run_test "Expression GROUP BY" \
+    "SELECT id + 1, COUNT(id) FROM users GROUP BY id;"
+
+run_test "Aggregate expression GROUP BY" \
+    "SELECT SUM(amount) + 10 FROM orders GROUP BY user_id;"
+
+run_test "Multiple columns in expression GROUP BY" \
+    "SELECT name + email, COUNT(id) FROM users GROUP BY name, email;"
+
 run_test "ORDER BY" \
     "SELECT name FROM users ORDER BY name ASC;"
 
@@ -172,7 +181,11 @@ run_negative_test "Unknown JOIN column" \
 run_negative_test "Ungrouped SELECT column" \
     "SELECT name, email, COUNT(id) FROM users GROUP BY name;" \
     "Column 'email' must appear in GROUP BY or be used in an aggregate function."
-    
+
+run_negative_test "Ungrouped column with expression" \
+    "SELECT id + 1, email, COUNT(id) FROM users GROUP BY id;" \
+    "Column 'email' must appear in GROUP BY or be used in an aggregate function."
+
 # ============================================================
 # Summary
 # ============================================================

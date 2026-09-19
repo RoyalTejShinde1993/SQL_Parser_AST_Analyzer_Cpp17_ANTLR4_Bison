@@ -387,6 +387,91 @@ bool SemanticAnalyzer::isGroupedExpression(
     return false;
 }
 
+bool SemanticAnalyzer::isValidGroupedExpression(
+    const Expr* expr,
+    const SelectStatement& statement) const
+{
+    if (!expr) {
+        return true;
+    }
+
+    if (isAggregateFunction(expr)) {
+        return true;
+    }
+
+    if (dynamic_cast<const Literal*>(expr)) {
+        return true;
+    }
+
+    if (const auto* column =
+            dynamic_cast<const ColumnRef*>(expr)) {
+
+        return isGroupedExpression(
+            column,
+            statement);
+    }
+
+    if (const auto* binary =
+            dynamic_cast<const BinaryExpr*>(expr)) {
+
+        return isValidGroupedExpression(
+                   binary->left.get(),
+                   statement) &&
+               isValidGroupedExpression(
+                   binary->right.get(),
+                   statement);
+    }
+
+    if (const auto* arithmetic =
+            dynamic_cast<const ArithmeticExpr*>(expr)) {
+
+        return isValidGroupedExpression(
+                   arithmetic->left.get(),
+                   statement) &&
+               isValidGroupedExpression(
+                   arithmetic->right.get(),
+                   statement);
+    }
+
+    if (const auto* function =
+            dynamic_cast<const FunctionCall*>(expr)) {
+
+        return isValidGroupedExpression(
+            function->argument.get(),
+            statement);
+    }
+
+    if (const auto* null_check =
+            dynamic_cast<const NullCheckExpr*>(expr)) {
+
+        return isValidGroupedExpression(
+            null_check->expression.get(),
+            statement);
+    }
+
+    if (const auto* in_expr =
+            dynamic_cast<const InExpr*>(expr)) {
+
+        if (!isValidGroupedExpression(
+                in_expr->expression.get(),
+                statement)) {
+            return false;
+        }
+
+        for (const auto& value : in_expr->values) {
+            if (!isValidGroupedExpression(
+                    value.get(),
+                    statement)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    return true;
+}
+
 void SemanticAnalyzer::validateGroupBy(
     const SelectStatement& statement,
     AnalysisResult& result) const
@@ -398,23 +483,27 @@ void SemanticAnalyzer::validateGroupBy(
     for (const auto& item : statement.select_items) {
         const Expr* expr = item.expr.get();
 
-        if (isAggregateFunction(expr)) {
+        if (isValidGroupedExpression(
+                expr,
+                statement)) {
             continue;
         }
 
         const auto* column =
             dynamic_cast<const ColumnRef*>(expr);
 
-        if (!column) {
-            continue;
-        }
-
-        if (!isGroupedExpression(expr, statement)) {
+        if (column) {
             result.valid = false;
             result.errors.push_back(
                 "Column '" + column->column +
                 "' must appear in GROUP BY or be used in an aggregate function.");
+            continue;
         }
+
+        result.valid = false;
+        result.errors.push_back(
+            "Expression contains a column that must appear "
+            "in GROUP BY or be used in an aggregate function.");
     }
 }
 
