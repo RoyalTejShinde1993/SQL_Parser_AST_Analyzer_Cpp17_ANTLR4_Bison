@@ -129,8 +129,8 @@ AnalysisResult SemanticAnalyzer::analyze(
     }
 
     if (aggregate_query) {
-        for (const auto& item : statement.order_by) {
-        if (!isValidGroupedExpression(
+    for (const auto& item : statement.order_by) {
+        if (!isValidOrderByExpression(
                 item.expr.get(),
                 statement)) {
 
@@ -555,6 +555,42 @@ bool SemanticAnalyzer::isValidGroupedExpression(
     }
 
     return true;
+}
+
+bool SemanticAnalyzer::isValidOrderByExpression(
+    const Expr* expr,
+    const SelectStatement& statement) const
+{
+    const auto* literal =
+        dynamic_cast<const Literal*>(expr);
+
+    if (literal) {
+        try {
+            std::size_t consumed = 0;
+            const long position =
+                std::stol(literal->value, &consumed);
+
+            if (consumed == literal->value.size()) {
+                if (position >= 1 &&
+                    static_cast<std::size_t>(position) <=
+                        statement.select_items.size()) {
+
+                    return isValidGroupedExpression(
+                        statement.select_items[position - 1].expr.get(),
+                        statement);
+                }
+
+                return false;
+            }
+        }
+        catch (...) {
+            // Not an integer positional reference.
+        }
+    }
+
+    return isValidGroupedExpression(
+        expr,
+        statement);
 }
 
 void SemanticAnalyzer::validateGroupBy(

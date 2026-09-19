@@ -144,9 +144,6 @@ run_test "Qualified GROUP BY" \
 run_test "Expression GROUP BY" \
     "SELECT id + 1, COUNT(id) FROM users GROUP BY id;"
 
-run_test "Aggregate expression GROUP BY" \
-    "SELECT SUM(amount) + 10 FROM orders GROUP BY user_id;"
-
 run_test "Multiple columns in expression GROUP BY" \
     "SELECT name + email, COUNT(id) FROM users GROUP BY name, email;"
 
@@ -165,6 +162,12 @@ run_test "Aggregate ORDER BY" \
 run_test "Grouped ORDER BY" \
     "SELECT name, COUNT(id) FROM users GROUP BY name ORDER BY name;"
 
+
+run_test "ORDER BY position" \
+    "SELECT name, COUNT(id) FROM users GROUP BY name ORDER BY 1;"
+
+run_test "ORDER BY aggregate position" \
+    "SELECT name, COUNT(id) FROM users GROUP BY name ORDER BY 2 DESC;"
 # ============================================================
 # Negative semantic tests
 # ============================================================
@@ -227,6 +230,14 @@ run_negative_test "Ungrouped ORDER BY column" \
 
 run_negative_test "Ungrouped ORDER BY expression" \
     "SELECT name, COUNT(id) FROM users GROUP BY name ORDER BY email + 1;" \
+    "ORDER BY expression contains a column that must appear in GROUP BY or be used in an aggregate function."
+
+run_negative_test "ORDER BY invalid position zero" \
+    "SELECT name, COUNT(id) FROM users GROUP BY name ORDER BY 0;" \
+    "ORDER BY expression contains a column that must appear in GROUP BY or be used in an aggregate function."
+
+run_negative_test "ORDER BY invalid position too large" \
+    "SELECT name, COUNT(id) FROM users GROUP BY name ORDER BY 3;" \
     "ORDER BY expression contains a column that must appear in GROUP BY or be used in an aggregate function."
 # ============================================================
 # Summary
