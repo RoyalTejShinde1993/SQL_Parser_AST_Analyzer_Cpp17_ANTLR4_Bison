@@ -207,6 +207,13 @@ run_negative_test "Nested aggregate in GROUP BY" \
     "SELECT COUNT(id) FROM users GROUP BY COUNT(id) + 1;" \
     "GROUP BY expression cannot contain an aggregate function."
 
+run_negative_test "HAVING column without GROUP BY" \
+    "SELECT COUNT(id) FROM users HAVING name = 'Alice';" \
+    "HAVING expression contains a column that must appear in GROUP BY or be used in an aggregate function."
+
+run_negative_test "HAVING mixed aggregate and column without GROUP BY" \
+    "SELECT COUNT(id) FROM users HAVING COUNT(id) > 1 AND name = 'Alice';" \
+    "HAVING expression contains a column that must appear in GROUP BY or be used in an aggregate function."
 # ============================================================
 # Summary
 # ============================================================

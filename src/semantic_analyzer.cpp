@@ -537,42 +537,40 @@ void SemanticAnalyzer::validateGroupBy(
     const SelectStatement& statement,
     AnalysisResult& result) const
 {
-    if (statement.group_by.empty()) {
-        return;
-    }
+    if (!statement.group_by.empty()) {
+        for (const auto& group_expr : statement.group_by) {
+            if (containsAggregateFunction(group_expr.get())) {
+                result.valid = false;
+                result.errors.push_back(
+                    "GROUP BY expression cannot contain an aggregate function.");
+            }
+        }
 
-    for (const auto& group_expr : statement.group_by) {
-        if (containsAggregateFunction(group_expr.get())) {
+        for (const auto& item : statement.select_items) {
+            const Expr* expr = item.expr.get();
+
+            if (isValidGroupedExpression(
+                    expr,
+                    statement)) {
+                continue;
+            }
+
+            const auto* column =
+                dynamic_cast<const ColumnRef*>(expr);
+
+            if (column) {
+                result.valid = false;
+                result.errors.push_back(
+                    "Column '" + column->column +
+                    "' must appear in GROUP BY or be used in an aggregate function.");
+                continue;
+            }
+
             result.valid = false;
             result.errors.push_back(
-                "GROUP BY expression cannot contain an aggregate function.");
+                "Expression contains a column that must appear "
+                "in GROUP BY or be used in an aggregate function.");
         }
-    }
-
-    for (const auto& item : statement.select_items) {
-        const Expr* expr = item.expr.get();
-
-        if (isValidGroupedExpression(
-                expr,
-                statement)) {
-            continue;
-        }
-
-        const auto* column =
-            dynamic_cast<const ColumnRef*>(expr);
-
-        if (column) {
-            result.valid = false;
-            result.errors.push_back(
-                "Column '" + column->column +
-                "' must appear in GROUP BY or be used in an aggregate function.");
-            continue;
-        }
-
-        result.valid = false;
-        result.errors.push_back(
-            "Expression contains a column that must appear "
-            "in GROUP BY or be used in an aggregate function.");
     }
 
     if (statement.having &&
