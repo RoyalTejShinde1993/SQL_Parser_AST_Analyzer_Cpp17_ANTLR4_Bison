@@ -46,6 +46,9 @@ private:
     bool isAggregateFunction(
         const Expr* expr) const;
 
+    bool containsAggregateFunction(
+    const Expr* expr) const;
+
     bool isGroupedExpression(
         const Expr* expr,
         const SelectStatement& statement) const;

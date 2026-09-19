@@ -203,6 +203,10 @@ run_negative_test "Aggregate in GROUP BY" \
     "SELECT COUNT(id) FROM users GROUP BY COUNT(id);" \
     "GROUP BY expression cannot contain an aggregate function."
 
+run_negative_test "Nested aggregate in GROUP BY" \
+    "SELECT COUNT(id) FROM users GROUP BY COUNT(id) + 1;" \
+    "GROUP BY expression cannot contain an aggregate function."
+
 # ============================================================
 # Summary
 # ============================================================

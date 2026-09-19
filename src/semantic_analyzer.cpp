@@ -336,6 +336,67 @@ bool SemanticAnalyzer::isAggregateFunction(
            function->name == "max";
 }
 
+bool SemanticAnalyzer::containsAggregateFunction(
+    const Expr* expr) const
+{
+    if (!expr) {
+        return false;
+    }
+
+    if (isAggregateFunction(expr)) {
+        return true;
+    }
+
+    if (const auto* binary =
+            dynamic_cast<const BinaryExpr*>(expr)) {
+
+        return containsAggregateFunction(
+                   binary->left.get()) ||
+               containsAggregateFunction(
+                   binary->right.get());
+    }
+
+    if (const auto* arithmetic =
+            dynamic_cast<const ArithmeticExpr*>(expr)) {
+
+        return containsAggregateFunction(
+                   arithmetic->left.get()) ||
+               containsAggregateFunction(
+                   arithmetic->right.get());
+    }
+
+    if (const auto* function =
+            dynamic_cast<const FunctionCall*>(expr)) {
+
+        return containsAggregateFunction(
+            function->argument.get());
+    }
+
+    if (const auto* null_check =
+            dynamic_cast<const NullCheckExpr*>(expr)) {
+
+        return containsAggregateFunction(
+            null_check->expression.get());
+    }
+
+    if (const auto* in_expr =
+            dynamic_cast<const InExpr*>(expr)) {
+
+        if (containsAggregateFunction(
+                in_expr->expression.get())) {
+            return true;
+        }
+
+        for (const auto& value : in_expr->values) {
+            if (containsAggregateFunction(value.get())) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
 bool SemanticAnalyzer::isGroupedExpression(
     const Expr* expr,
     const SelectStatement& statement) const
@@ -481,7 +542,7 @@ void SemanticAnalyzer::validateGroupBy(
     }
 
     for (const auto& group_expr : statement.group_by) {
-        if (isAggregateFunction(group_expr.get())) {
+        if (containsAggregateFunction(group_expr.get())) {
             result.valid = false;
             result.errors.push_back(
                 "GROUP BY expression cannot contain an aggregate function.");
