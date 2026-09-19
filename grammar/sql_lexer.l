@@ -31,6 +31,11 @@
 "DESC"|"desc"           return DESC;
 "MIN"|"min"             return MIN;
 "MAX"|"max"             return MAX;
+"INNER"|"inner"     return INNER;
+"LEFT"|"left"       return LEFT;
+"RIGHT"|"right"     return RIGHT;
+"FULL"|"full"       return FULL;
+"CROSS"|"cross"     return CROSS;
 
 ">="                    return GTE;
 "<="                    return LTE;

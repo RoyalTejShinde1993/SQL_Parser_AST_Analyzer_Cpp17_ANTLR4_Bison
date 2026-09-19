@@ -72,36 +72,41 @@ extern int yydebug;
     FROM = 265,                    /* FROM  */
     WHERE = 266,                   /* WHERE  */
     JOIN = 267,                    /* JOIN  */
-    ON = 268,                      /* ON  */
-    ORDER = 269,                   /* ORDER  */
-    GROUP = 270,                   /* GROUP  */
-    BY = 271,                      /* BY  */
-    HAVING = 272,                  /* HAVING  */
-    AS = 273,                      /* AS  */
-    AND = 274,                     /* AND  */
-    OR = 275,                      /* OR  */
-    IS = 276,                      /* IS  */
-    NOT = 277,                     /* NOT  */
-    NULL_TOKEN = 278,              /* NULL_TOKEN  */
-    IN = 279,                      /* IN  */
-    ASC = 280,                     /* ASC  */
-    DESC = 281,                    /* DESC  */
-    EQ = 282,                      /* EQ  */
-    GT = 283,                      /* GT  */
-    LT = 284,                      /* LT  */
-    GTE = 285,                     /* GTE  */
-    LTE = 286,                     /* LTE  */
-    NEQ = 287,                     /* NEQ  */
-    PLUS = 288,                    /* PLUS  */
-    MINUS = 289,                   /* MINUS  */
-    STAR = 290,                    /* STAR  */
-    SLASH = 291,                   /* SLASH  */
-    COMMA = 292,                   /* COMMA  */
-    DOT = 293,                     /* DOT  */
-    SEMICOLON = 294,               /* SEMICOLON  */
-    IDENT = 295,                   /* IDENT  */
-    NUMBER = 296,                  /* NUMBER  */
-    STRING = 297                   /* STRING  */
+    INNER = 268,                   /* INNER  */
+    LEFT = 269,                    /* LEFT  */
+    RIGHT = 270,                   /* RIGHT  */
+    FULL = 271,                    /* FULL  */
+    CROSS = 272,                   /* CROSS  */
+    ON = 273,                      /* ON  */
+    ORDER = 274,                   /* ORDER  */
+    GROUP = 275,                   /* GROUP  */
+    BY = 276,                      /* BY  */
+    HAVING = 277,                  /* HAVING  */
+    AS = 278,                      /* AS  */
+    AND = 279,                     /* AND  */
+    OR = 280,                      /* OR  */
+    IS = 281,                      /* IS  */
+    NOT = 282,                     /* NOT  */
+    NULL_TOKEN = 283,              /* NULL_TOKEN  */
+    IN = 284,                      /* IN  */
+    ASC = 285,                     /* ASC  */
+    DESC = 286,                    /* DESC  */
+    EQ = 287,                      /* EQ  */
+    GT = 288,                      /* GT  */
+    LT = 289,                      /* LT  */
+    GTE = 290,                     /* GTE  */
+    LTE = 291,                     /* LTE  */
+    NEQ = 292,                     /* NEQ  */
+    PLUS = 293,                    /* PLUS  */
+    MINUS = 294,                   /* MINUS  */
+    STAR = 295,                    /* STAR  */
+    SLASH = 296,                   /* SLASH  */
+    COMMA = 297,                   /* COMMA  */
+    DOT = 298,                     /* DOT  */
+    SEMICOLON = 299,               /* SEMICOLON  */
+    IDENT = 300,                   /* IDENT  */
+    NUMBER = 301,                  /* NUMBER  */
+    STRING = 302                   /* STRING  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -123,7 +128,7 @@ union YYSTYPE
     std::vector<sql::Expr*>* group_exprs;
     std::vector<sql::Expr*>* expr_list;
 
-#line 127 "sql_parser.tab.h"
+#line 132 "sql_parser.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

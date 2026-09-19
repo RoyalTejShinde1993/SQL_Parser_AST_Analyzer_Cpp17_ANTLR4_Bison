@@ -255,6 +255,15 @@ void SemanticAnalyzer::analyzeExpr(
         return;
     }
 
+    if (const auto* unary = dynamic_cast<const UnaryExpr*>(expr)) {
+        analyzeExpr(
+            unary->operand.get(),
+            statement,
+            schema,
+            result);
+
+        return;
+    }
     if (const auto* binary = dynamic_cast<const BinaryExpr*>(expr)) {
         analyzeExpr(
             binary->left.get(),
@@ -373,6 +382,13 @@ bool SemanticAnalyzer::containsAggregateFunction(
         return true;
     }
 
+    if (const auto* unary =
+            dynamic_cast<const UnaryExpr*>(expr)) {
+
+        return containsAggregateFunction(
+            unary->operand.get());
+    }
+
     if (const auto* binary =
             dynamic_cast<const BinaryExpr*>(expr)) {
 
@@ -483,11 +499,11 @@ bool SemanticAnalyzer::isValidGroupedExpression(
     }
 
     if (isAggregateFunction(expr)) {
-        return true;
+    return true;
     }
 
     if (dynamic_cast<const Literal*>(expr)) {
-        return true;
+    return true;
     }
 
     if (const auto* column =
@@ -496,6 +512,14 @@ bool SemanticAnalyzer::isValidGroupedExpression(
         return isGroupedExpression(
             column,
             statement);
+    }
+
+    if (const auto* unary =
+        dynamic_cast<const UnaryExpr*>(expr)) {
+
+    return isValidGroupedExpression(
+        unary->operand.get(),
+        statement);
     }
 
     if (const auto* binary =

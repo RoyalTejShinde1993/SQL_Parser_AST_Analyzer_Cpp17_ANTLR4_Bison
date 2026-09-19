@@ -28,16 +28,15 @@ extern std::unique_ptr<sql::SelectStatement> parsed_statement;
     std::vector<sql::Expr*>* group_exprs;
     std::vector<sql::Expr*>* expr_list;
 }
-
-%token SELECT DISTINCT COUNT SUM AVG MIN MAX FROM WHERE JOIN ON ORDER GROUP BY HAVING AS AND OR IS NOT NULL_TOKEN IN ASC DESC
+%token SELECT DISTINCT COUNT SUM AVG MIN MAX FROM WHERE JOIN INNER LEFT RIGHT FULL CROSS ON ORDER GROUP BY HAVING AS AND OR IS NOT NULL_TOKEN IN ASC DESC
 %token EQ GT LT GTE LTE NEQ PLUS MINUS STAR SLASH COMMA DOT SEMICOLON
 %left OR
 %left AND
+%right NOT
 %left EQ GT LT GTE LTE NEQ
 %left IS IN
 %left PLUS MINUS
 %left STAR SLASH
-%right NOT
 
 %token <str> IDENT NUMBER STRING
 
@@ -162,12 +161,77 @@ join_list:
     join_list JOIN table_ref ON expr
     {
         sql::JoinClause join;
+        join.type = sql::JoinType::INNER;
         join.table = std::move(*$3);
         join.condition.reset($5);
 
         $1->push_back(std::move(join));
 
         delete $3;
+        $$ = $1;
+    }
+    |
+    join_list INNER JOIN table_ref ON expr
+    {
+        sql::JoinClause join;
+        join.type = sql::JoinType::INNER;
+        join.table = std::move(*$4);
+        join.condition.reset($6);
+
+        $1->push_back(std::move(join));
+
+        delete $4;
+        $$ = $1;
+    }
+    |
+    join_list LEFT JOIN table_ref ON expr
+    {
+        sql::JoinClause join;
+        join.type = sql::JoinType::LEFT;
+        join.table = std::move(*$4);
+        join.condition.reset($6);
+
+        $1->push_back(std::move(join));
+
+        delete $4;
+        $$ = $1;
+    }
+    |
+    join_list RIGHT JOIN table_ref ON expr
+    {
+        sql::JoinClause join;
+        join.type = sql::JoinType::RIGHT;
+        join.table = std::move(*$4);
+        join.condition.reset($6);
+
+        $1->push_back(std::move(join));
+
+        delete $4;
+        $$ = $1;
+    }
+    |
+    join_list FULL JOIN table_ref ON expr
+    {
+        sql::JoinClause join;
+        join.type = sql::JoinType::FULL;
+        join.table = std::move(*$4);
+        join.condition.reset($6);
+
+        $1->push_back(std::move(join));
+
+        delete $4;
+        $$ = $1;
+    }
+    |
+    join_list CROSS JOIN table_ref
+    {
+        sql::JoinClause join;
+        join.type = sql::JoinType::CROSS;
+        join.table = std::move(*$4);
+
+        $1->push_back(std::move(join));
+
+        delete $4;
         $$ = $1;
     }
     ;
@@ -312,6 +376,14 @@ select_alias_opt:
     ;
 
 expr:
+    NOT expr
+    {
+        auto unary = new sql::UnaryExpr();
+        unary->op = "NOT";
+        unary->operand.reset($2);
+        $$ = unary;
+    }
+    |
     COUNT '(' expr ')'
     {
         auto expr = new sql::FunctionCall();

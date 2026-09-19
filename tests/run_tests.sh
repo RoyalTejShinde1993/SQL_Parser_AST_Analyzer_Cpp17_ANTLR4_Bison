@@ -105,6 +105,21 @@ run_test "String IN" \
 run_test "JOIN" \
     "SELECT users.name FROM users JOIN orders ON users.id = orders.user_id;"
 
+run_test "INNER JOIN" \
+    "SELECT users.name FROM users INNER JOIN orders ON users.id = orders.user_id;"
+
+run_test "LEFT JOIN" \
+    "SELECT users.name FROM users LEFT JOIN orders ON users.id = orders.user_id;"
+
+run_test "RIGHT JOIN" \
+    "SELECT users.name FROM users RIGHT JOIN orders ON users.id = orders.user_id;"
+
+run_test "FULL JOIN" \
+    "SELECT users.name FROM users FULL JOIN orders ON users.id = orders.user_id;"
+
+run_test "CROSS JOIN" \
+    "SELECT users.name FROM users CROSS JOIN orders;"
+
 run_test "GROUP BY" \
     "SELECT name, COUNT(id) FROM users GROUP BY name;"
 
@@ -176,6 +191,21 @@ run_test "Aggregate ORDER BY alias" \
 
 run_test "Grouped ORDER BY alias" \
     "SELECT name AS username, COUNT(id) AS total FROM users GROUP BY name ORDER BY username;"
+
+run_test "AND OR precedence" \
+    "SELECT name FROM users WHERE id = 1 AND name = 'Alice' OR email = 'x';"
+
+run_test "Parenthesized OR with AND" \
+    "SELECT name FROM users WHERE id = 1 AND (name = 'Alice' OR email = 'x');"
+
+run_test "Parenthesized AND with OR" \
+    "SELECT name FROM users WHERE (id = 1 OR id = 2) AND name = 'Alice';"
+
+run_test "NOT parenthesized expression" \
+    "SELECT name FROM users WHERE NOT (id = 1);"
+
+run_test "NOT comparison with AND" \
+    "SELECT name FROM users WHERE NOT id = 1 AND name = 'Alice';"
 # ============================================================
 # Negative semantic tests
 # ============================================================
@@ -252,6 +282,17 @@ run_negative_test "Unknown ORDER BY alias" \
     "SELECT name AS username, COUNT(id) FROM users GROUP BY name ORDER BY missing_alias;" \
     "ORDER BY expression contains a column that must appear in GROUP BY or be used in an aggregate function."
 
+run_negative_test "Unknown LEFT JOIN column" \
+    "SELECT users.name FROM users LEFT JOIN orders ON users.unknown = orders.user_id;" \
+    "Unknown column: users.unknown"
+
+run_negative_test "Unknown RIGHT JOIN column" \
+    "SELECT users.name FROM users RIGHT JOIN orders ON users.id = orders.unknown;" \
+    "Unknown column: orders.unknown"
+
+run_negative_test "Unknown FULL JOIN column" \
+    "SELECT users.name FROM users FULL JOIN orders ON users.unknown = orders.user_id;" \
+    "Unknown column: users.unknown"
 # ============================================================
 # Summary
 # ============================================================

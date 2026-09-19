@@ -28,6 +28,11 @@ struct FunctionCall final : Expr {
     std::unique_ptr<Expr> argument;
 };
 
+struct UnaryExpr final : Expr {
+    std::string op;
+    std::unique_ptr<Expr> operand;
+};
+
 struct BinaryExpr final : Expr {
     std::string op;
     std::unique_ptr<Expr> left;
@@ -61,7 +66,16 @@ struct TableRef {
     std::string alias;
 };
 
+enum class JoinType {
+    INNER,
+    LEFT,
+    RIGHT,
+    FULL,
+    CROSS
+};
+
 struct JoinClause {
+    JoinType type = JoinType::INNER;
     TableRef table;
     std::unique_ptr<Expr> condition;
 };
