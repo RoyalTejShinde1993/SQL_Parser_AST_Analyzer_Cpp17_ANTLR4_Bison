@@ -5,12 +5,70 @@
 #include <memory>
 #include <string>
 
+
 extern int yyparse();
 extern int yylex_destroy();
 
 std::unique_ptr<sql::SelectStatement> parsed_statement;
 
 extern void yy_scan_string(const char*);
+void debugExpr(const sql::Expr* expr, int depth = 0)
+{
+    if (!expr) {
+        return;
+    }
+
+    const std::string indent(depth * 2, ' ');
+
+    if (const auto* binary =
+        dynamic_cast<const sql::BinaryExpr*>(expr)) {
+
+        std::cout << indent
+                  << "BinaryExpr: "
+                  << binary->op << "\n";
+
+        debugExpr(binary->left.get(), depth + 1);
+        debugExpr(binary->right.get(), depth + 1);
+        return;
+    }
+
+    if (const auto* function =
+        dynamic_cast<const sql::FunctionCall*>(expr)) {
+
+        std::cout << indent
+                  << "FunctionCall: "
+                  << function->name << "\n";
+
+        debugExpr(function->argument.get(), depth + 1);
+        return;
+    }
+
+    if (const auto* column =
+        dynamic_cast<const sql::ColumnRef*>(expr)) {
+
+        std::cout << indent
+                  << "ColumnRef: "
+                  << column->column << "\n";
+        return;
+    }
+
+    if (const auto* literal =
+        dynamic_cast<const sql::Literal*>(expr)) {
+
+        std::cout << indent
+                  << "Literal: "
+                  << literal->value << "\n";
+        return;
+    }
+
+    if (dynamic_cast<const sql::WildcardRef*>(expr)) {
+        std::cout << indent
+                  << "WildcardRef\n";
+        return;
+    }
+
+    std::cout << indent << "UNKNOWN NODE\n";
+}
 
 int main(int argc, char* argv[])
 {
@@ -41,9 +99,14 @@ int main(int argc, char* argv[])
 
     std::cout << "Syntax: valid\n";
 
+    std::cout << "Distinct: "
+          << (parsed_statement->distinct ? "yes" : "no")
+          << "\n";
+
     const sql::SemanticAnalyzer analyzer;
+
     const sql::AnalysisResult result =
-        analyzer.analyze(*parsed_statement);
+    analyzer.analyze(*parsed_statement);
 
     std::cout << "Semantic analysis: "
               << (result.valid ? "valid" : "invalid")
@@ -52,6 +115,19 @@ int main(int argc, char* argv[])
     std::cout << "Tables:\n";
     for (const auto& table : result.tables) {
         std::cout << "  - " << table << "\n";
+    }
+
+    std::cout << "\nSelect items:\n";
+    for (const auto& item : parsed_statement->select_items) {
+        std::cout << "  - ";
+
+        if (!item.alias.empty()) {
+            std::cout << item.alias;
+        } else {
+            std::cout << "(no alias)";
+        }
+
+        std::cout << "\n";
     }
 
     std::cout << "\nColumns:\n";

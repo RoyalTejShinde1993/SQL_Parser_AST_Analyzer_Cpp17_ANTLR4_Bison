@@ -34,8 +34,26 @@ struct BinaryExpr final : Expr {
     std::unique_ptr<Expr> right;
 };
 
+struct NullCheckExpr final : Expr {
+    std::unique_ptr<Expr> expression;
+    bool is_not = false;
+};
+
+struct InExpr final : Expr {
+    std::unique_ptr<Expr> expression;
+    std::vector<std::unique_ptr<Expr>> values;
+    bool is_not = false;
+};
+
+struct ArithmeticExpr final : Expr {
+    std::string op;
+    std::unique_ptr<Expr> left;
+    std::unique_ptr<Expr> right;
+};
+
 struct SelectItem {
     std::unique_ptr<Expr> expr;
+    std::string alias;
 };
 
 struct TableRef {
@@ -54,11 +72,13 @@ struct OrderItem {
 };
 
 struct SelectStatement {
-    std::vector<SelectItem> select_items;
+    bool distinct = false;
+    std::vector<SelectItem> select_items;;
     TableRef from;
     std::vector<JoinClause> joins;
     std::unique_ptr<Expr> where;
     std::vector<std::unique_ptr<Expr>> group_by;
+    std::unique_ptr<Expr> having;
     std::vector<OrderItem> order_by;
 };
 

@@ -42,6 +42,18 @@ private:
         const Schema& schema,
         AnalysisResult& result) const;
 
+
+    bool isAggregateFunction(
+        const Expr* expr) const;
+
+    bool isGroupedExpression(
+        const Expr* expr,
+        const SelectStatement& statement) const;
+
+    void validateGroupBy(
+        const SelectStatement& statement,
+        AnalysisResult& result) const;
+
     void addTable(
         std::vector<std::string>& tables,
         const std::string& table) const;

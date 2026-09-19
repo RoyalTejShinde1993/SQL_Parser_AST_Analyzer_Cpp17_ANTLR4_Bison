@@ -18,6 +18,7 @@ extern std::unique_ptr<sql::SelectStatement> parsed_statement;
 
 %union {
     std::string* str;
+    bool boolean;
     sql::Expr* expr;
     sql::SelectStatement* stmt;
     sql::TableRef* table;
@@ -25,64 +26,99 @@ extern std::unique_ptr<sql::SelectStatement> parsed_statement;
     std::vector<sql::JoinClause>* joins;
     std::vector<sql::OrderItem>* orders;
     std::vector<sql::Expr*>* group_exprs;
+    std::vector<sql::Expr*>* expr_list;
 }
 
-%token SELECT COUNT FROM WHERE JOIN ON ORDER GROUP BY AS AND OR ASC DESC
-%token EQ GT LT GTE LTE NEQ COMMA DOT SEMICOLON
+%token SELECT DISTINCT COUNT SUM AVG MIN MAX FROM WHERE JOIN ON ORDER GROUP BY HAVING AS AND OR IS NOT NULL_TOKEN IN ASC DESC
+%token EQ GT LT GTE LTE NEQ PLUS MINUS STAR SLASH COMMA DOT SEMICOLON
 %left OR
 %left AND
 %left EQ GT LT GTE LTE NEQ
+%left IS IN
+%left PLUS MINUS
+%left STAR SLASH
+%right NOT
 
 %token <str> IDENT NUMBER STRING
 
 %type <stmt> statement
+%type <boolean> distinct_opt
 %type <items> select_list
-%type <expr> expr where_opt
+%type <expr> expr where_opt having_opt
+%type <str> select_alias_opt
 %type <table> table_ref
 %type <joins> join_list
 %type <orders> order_opt order_list
 %type <group_exprs> group_opt group_list
+%type <expr_list> in_list
 
 %%
 
 statement:
-    SELECT select_list FROM table_ref join_list where_opt group_opt order_opt SEMICOLON
+    SELECT distinct_opt select_list FROM table_ref join_list where_opt group_opt having_opt order_opt SEMICOLON
     {
-        auto stmt = new sql::SelectStatement();
-        stmt->select_items = std::move(*$2);
-        stmt->from = std::move(*$4);
-        stmt->joins = std::move(*$5);
-        stmt->where = std::unique_ptr<sql::Expr>($6);
+    auto stmt = new sql::SelectStatement();
 
-        for (auto* expr : *$7) {
-            stmt->group_by.emplace_back(expr);
-        }
-        stmt->order_by = std::move(*$8);
+    stmt->distinct = $2;
+    stmt->select_items = std::move(*$3);
+    stmt->from = std::move(*$5);
+    stmt->joins = std::move(*$6);
+    stmt->where = std::unique_ptr<sql::Expr>($7);
 
-        delete $2;
-        delete $4;
-        delete $5;
-        delete $7;
-        delete $8;
+    for (auto* expr : *$8) {
+        stmt->group_by.emplace_back(expr);
+    }
 
-        parsed_statement.reset(stmt);
-        $$ = stmt;
+    stmt->having = std::unique_ptr<sql::Expr>($9);
+    stmt->order_by = std::move(*$10);
+
+    delete $3;
+    delete $5;
+    delete $6;
+    delete $8;
+    delete $10;
+
+    parsed_statement.reset(stmt);
+    $$ = stmt;
+    }
+    ;
+distinct_opt:
+    /* empty */
+    {
+        $$ = false;
+    }
+    |
+    DISTINCT
+    {
+        $$ = true;
     }
     ;
 
 select_list:
-    expr
+    expr select_alias_opt
     {
         auto items = new std::vector<sql::SelectItem>();
         items->emplace_back();
         items->back().expr.reset($1);
+
+        if ($2) {
+            items->back().alias = *$2;
+            delete $2;
+        }
+
         $$ = items;
     }
     |
-    select_list COMMA expr
+    select_list COMMA expr select_alias_opt
     {
         $1->emplace_back();
         $1->back().expr.reset($3);
+
+        if ($4) {
+            $1->back().alias = *$4;
+            delete $4;
+        }
+
         $$ = $1;
     }
     ;
@@ -147,6 +183,17 @@ where_opt:
         $$ = $2;
     }
     ;
+having_opt:
+    /* empty */
+    {
+        $$ = nullptr;
+    }
+    |
+    HAVING expr
+    {
+        $$ = $2;
+    }
+    ;
 group_opt:
     /* empty */
     {
@@ -173,6 +220,22 @@ group_list:
         $$ = $1;
     }
     ;
+
+in_list:
+    expr
+    {
+        auto values = new std::vector<sql::Expr*>();
+        values->push_back($1);
+        $$ = values;
+    }
+    |
+    in_list COMMA expr
+    {
+        $1->push_back($3);
+        $$ = $1;
+    }
+    ;
+
 order_opt:
     /* empty */
     {
@@ -235,6 +298,17 @@ order_list:
         $$ = $1;
     }
     ;
+
+select_alias_opt:
+    /* empty */
+    {
+        $$ = nullptr;
+    }
+    |
+    AS IDENT
+    {
+        $$ = $2;
+    }
     ;
 
 expr:
@@ -246,9 +320,87 @@ expr:
         $$ = expr;
     }
     |
+    SUM '(' expr ')'
+    {
+        auto expr = new sql::FunctionCall();
+        expr->name = "SUM";
+        expr->argument.reset($3);
+        $$ = expr;
+    }
+    |
+    AVG '(' expr ')'
+    {
+        auto expr = new sql::FunctionCall();
+        expr->name = "AVG";
+        expr->argument.reset($3);
+        $$ = expr;
+    }
+     |
+    MIN '(' expr ')'
+    {
+        auto expr = new sql::FunctionCall();
+        expr->name = "MIN";
+        expr->argument.reset($3);
+        $$ = expr;
+    }
+    |
+    MAX '(' expr ')'
+    {
+        auto expr = new sql::FunctionCall();
+        expr->name = "MAX";
+        expr->argument.reset($3);
+        $$ = expr;
+    }
+    |
     '(' expr ')'
     {
         $$ = $2;
+    }
+    |
+    expr IS NULL_TOKEN
+    {
+        auto expr = new sql::NullCheckExpr();
+        expr->expression.reset($1);
+        expr->is_not = false;
+        $$ = expr;
+    }
+    |
+    expr IS NOT NULL_TOKEN
+    {
+        auto expr = new sql::NullCheckExpr();
+        expr->expression.reset($1);
+        expr->is_not = true;
+        $$ = expr;
+    }
+    |
+    expr IN '(' in_list ')'
+    {
+        auto expr = new sql::InExpr();
+        expr->expression.reset($1);
+
+        for (auto* value : *$4) {
+            expr->values.emplace_back(value);
+        }
+
+        delete $4;
+
+        expr->is_not = false;
+        $$ = expr;
+    }
+    |
+    expr NOT IN '(' in_list ')'
+    {
+        auto expr = new sql::InExpr();
+        expr->expression.reset($1);
+
+        for (auto* value : *$5) {
+            expr->values.emplace_back(value);
+        }
+
+        delete $5;
+
+        expr->is_not = true;
+        $$ = expr;
     }
     |
     IDENT
@@ -269,12 +421,12 @@ expr:
         $$ = expr;
     }
     |
-    '*'
+    STAR
     {
         $$ = new sql::WildcardRef();
     }
     |
-    IDENT DOT '*'
+    IDENT DOT STAR
     {
         auto expr = new sql::WildcardRef();
         expr->table = *$1;
@@ -295,6 +447,42 @@ expr:
         auto expr = new sql::Literal();
         expr->value = *$1;
         delete $1;
+        $$ = expr;
+    }
+       |
+    expr PLUS expr
+    {
+        auto expr = new sql::ArithmeticExpr();
+        expr->op = "+";
+        expr->left.reset($1);
+        expr->right.reset($3);
+        $$ = expr;
+    }
+    |
+    expr MINUS expr
+    {
+        auto expr = new sql::ArithmeticExpr();
+        expr->op = "-";
+        expr->left.reset($1);
+        expr->right.reset($3);
+        $$ = expr;
+    }
+    |
+    expr STAR expr
+    {
+        auto expr = new sql::ArithmeticExpr();
+        expr->op = "*";
+        expr->left.reset($1);
+        expr->right.reset($3);
+        $$ = expr;
+    }
+    |
+    expr SLASH expr
+    {
+        auto expr = new sql::ArithmeticExpr();
+        expr->op = "/";
+        expr->left.reset($1);
+        expr->right.reset($3);
         $$ = expr;
     }
     |

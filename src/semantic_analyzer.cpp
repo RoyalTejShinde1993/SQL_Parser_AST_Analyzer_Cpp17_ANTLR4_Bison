@@ -93,6 +93,12 @@ AnalysisResult SemanticAnalyzer::analyze(
         schema,
         result);
 
+    analyzeExpr(
+        statement.having.get(),
+        statement,
+        schema,
+        result);
+
     for (const auto& expr : statement.group_by) {
         analyzeExpr(
             expr.get(),
@@ -108,6 +114,8 @@ AnalysisResult SemanticAnalyzer::analyze(
             schema,
             result);
     }
+
+    validateGroupBy(statement, result);
 
     return result;
 }
@@ -237,6 +245,56 @@ void SemanticAnalyzer::analyzeExpr(
         return;
     }
 
+    if (const auto* arithmetic =
+        dynamic_cast<const ArithmeticExpr*>(expr)) {
+
+    analyzeExpr(
+        arithmetic->left.get(),
+        statement,
+        schema,
+        result);
+
+    analyzeExpr(
+        arithmetic->right.get(),
+        statement,
+        schema,
+        result);
+
+    return;
+    }
+
+    if (const auto* null_check =
+        dynamic_cast<const NullCheckExpr*>(expr)) {
+
+    analyzeExpr(
+        null_check->expression.get(),
+        statement,
+        schema,
+        result);
+
+    return;
+    }
+
+    if (const auto* in_expr =
+        dynamic_cast<const InExpr*>(expr)) {
+
+    analyzeExpr(
+        in_expr->expression.get(),
+        statement,
+        schema,
+        result);
+
+    for (const auto& value : in_expr->values) {
+        analyzeExpr(
+            value.get(),
+            statement,
+            schema,
+            result);
+    }
+
+    return;
+    }
+
     if (const auto* function =
     dynamic_cast<const FunctionCall*>(expr)) {
 
@@ -248,9 +306,116 @@ void SemanticAnalyzer::analyzeExpr(
 
     return;
 }
+if (dynamic_cast<const Literal*>(expr)) {
+return;
+}
 
-    result.valid = false;
-    result.errors.push_back("Unknown expression node.");
+result.valid = false;
+result.errors.push_back("Unknown expression node.");
+}
+
+bool SemanticAnalyzer::isAggregateFunction(
+    const Expr* expr) const
+{
+    const auto* function =
+        dynamic_cast<const FunctionCall*>(expr);
+
+    if (!function) {
+        return false;
+    }
+
+    return function->name == "COUNT" ||
+           function->name == "count" ||
+           function->name == "SUM" ||
+           function->name == "sum" ||
+           function->name == "AVG" ||
+           function->name == "avg" ||
+           function->name == "MIN" ||
+           function->name == "min" ||
+           function->name == "MAX" ||
+           function->name == "max";
+}
+
+bool SemanticAnalyzer::isGroupedExpression(
+    const Expr* expr,
+    const SelectStatement& statement) const
+{
+    const auto* column =
+        dynamic_cast<const ColumnRef*>(expr);
+
+    if (!column) {
+        return false;
+    }
+
+    for (const auto& group_expr : statement.group_by) {
+        const auto* grouped_column =
+            dynamic_cast<const ColumnRef*>(group_expr.get());
+
+        if (!grouped_column) {
+            continue;
+        }
+
+        if (column->column != grouped_column->column) {
+            continue;
+        }
+
+        if (column->table == grouped_column->table) {
+            return true;
+        }
+
+        if (column->table.empty() &&
+            grouped_column->table.empty()) {
+            return true;
+        }
+
+        if (column->table.empty() ||
+            grouped_column->table.empty()) {
+            continue;
+        }
+
+        if (column->table == statement.from.name &&
+            grouped_column->table == statement.from.alias) {
+            return true;
+        }
+
+        if (column->table == statement.from.alias &&
+            grouped_column->table == statement.from.name) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void SemanticAnalyzer::validateGroupBy(
+    const SelectStatement& statement,
+    AnalysisResult& result) const
+{
+    if (statement.group_by.empty()) {
+        return;
+    }
+
+    for (const auto& item : statement.select_items) {
+        const Expr* expr = item.expr.get();
+
+        if (isAggregateFunction(expr)) {
+            continue;
+        }
+
+        const auto* column =
+            dynamic_cast<const ColumnRef*>(expr);
+
+        if (!column) {
+            continue;
+        }
+
+        if (!isGroupedExpression(expr, statement)) {
+            result.valid = false;
+            result.errors.push_back(
+                "Column '" + column->column +
+                "' must appear in GROUP BY or be used in an aggregate function.");
+        }
+    }
 }
 
 void SemanticAnalyzer::addTable(

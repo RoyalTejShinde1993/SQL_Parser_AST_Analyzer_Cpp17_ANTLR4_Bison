@@ -63,31 +63,45 @@ extern int yydebug;
     YYerror = 256,                 /* error  */
     YYUNDEF = 257,                 /* "invalid token"  */
     SELECT = 258,                  /* SELECT  */
-    COUNT = 259,                   /* COUNT  */
-    FROM = 260,                    /* FROM  */
-    WHERE = 261,                   /* WHERE  */
-    JOIN = 262,                    /* JOIN  */
-    ON = 263,                      /* ON  */
-    ORDER = 264,                   /* ORDER  */
-    GROUP = 265,                   /* GROUP  */
-    BY = 266,                      /* BY  */
-    AS = 267,                      /* AS  */
-    AND = 268,                     /* AND  */
-    OR = 269,                      /* OR  */
-    ASC = 270,                     /* ASC  */
-    DESC = 271,                    /* DESC  */
-    EQ = 272,                      /* EQ  */
-    GT = 273,                      /* GT  */
-    LT = 274,                      /* LT  */
-    GTE = 275,                     /* GTE  */
-    LTE = 276,                     /* LTE  */
-    NEQ = 277,                     /* NEQ  */
-    COMMA = 278,                   /* COMMA  */
-    DOT = 279,                     /* DOT  */
-    SEMICOLON = 280,               /* SEMICOLON  */
-    IDENT = 281,                   /* IDENT  */
-    NUMBER = 282,                  /* NUMBER  */
-    STRING = 283                   /* STRING  */
+    DISTINCT = 259,                /* DISTINCT  */
+    COUNT = 260,                   /* COUNT  */
+    SUM = 261,                     /* SUM  */
+    AVG = 262,                     /* AVG  */
+    MIN = 263,                     /* MIN  */
+    MAX = 264,                     /* MAX  */
+    FROM = 265,                    /* FROM  */
+    WHERE = 266,                   /* WHERE  */
+    JOIN = 267,                    /* JOIN  */
+    ON = 268,                      /* ON  */
+    ORDER = 269,                   /* ORDER  */
+    GROUP = 270,                   /* GROUP  */
+    BY = 271,                      /* BY  */
+    HAVING = 272,                  /* HAVING  */
+    AS = 273,                      /* AS  */
+    AND = 274,                     /* AND  */
+    OR = 275,                      /* OR  */
+    IS = 276,                      /* IS  */
+    NOT = 277,                     /* NOT  */
+    NULL_TOKEN = 278,              /* NULL_TOKEN  */
+    IN = 279,                      /* IN  */
+    ASC = 280,                     /* ASC  */
+    DESC = 281,                    /* DESC  */
+    EQ = 282,                      /* EQ  */
+    GT = 283,                      /* GT  */
+    LT = 284,                      /* LT  */
+    GTE = 285,                     /* GTE  */
+    LTE = 286,                     /* LTE  */
+    NEQ = 287,                     /* NEQ  */
+    PLUS = 288,                    /* PLUS  */
+    MINUS = 289,                   /* MINUS  */
+    STAR = 290,                    /* STAR  */
+    SLASH = 291,                   /* SLASH  */
+    COMMA = 292,                   /* COMMA  */
+    DOT = 293,                     /* DOT  */
+    SEMICOLON = 294,               /* SEMICOLON  */
+    IDENT = 295,                   /* IDENT  */
+    NUMBER = 296,                  /* NUMBER  */
+    STRING = 297                   /* STRING  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -99,6 +113,7 @@ union YYSTYPE
 #line 19 "grammar/sql_parser.y"
 
     std::string* str;
+    bool boolean;
     sql::Expr* expr;
     sql::SelectStatement* stmt;
     sql::TableRef* table;
@@ -106,8 +121,9 @@ union YYSTYPE
     std::vector<sql::JoinClause>* joins;
     std::vector<sql::OrderItem>* orders;
     std::vector<sql::Expr*>* group_exprs;
+    std::vector<sql::Expr*>* expr_list;
 
-#line 111 "sql_parser.tab.h"
+#line 127 "sql_parser.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;
