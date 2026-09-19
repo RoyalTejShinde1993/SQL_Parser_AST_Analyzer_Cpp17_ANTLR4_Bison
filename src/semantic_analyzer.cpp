@@ -480,6 +480,14 @@ void SemanticAnalyzer::validateGroupBy(
         return;
     }
 
+    for (const auto& group_expr : statement.group_by) {
+        if (isAggregateFunction(group_expr.get())) {
+            result.valid = false;
+            result.errors.push_back(
+                "GROUP BY expression cannot contain an aggregate function.");
+        }
+    }
+
     for (const auto& item : statement.select_items) {
         const Expr* expr = item.expr.get();
 
@@ -504,7 +512,7 @@ void SemanticAnalyzer::validateGroupBy(
         result.errors.push_back(
             "Expression contains a column that must appear "
             "in GROUP BY or be used in an aggregate function.");
-        }
+    }
 
     if (statement.having &&
         !isValidGroupedExpression(

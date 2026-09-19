@@ -156,6 +156,9 @@ run_test "ORDER BY" \
 run_test "Multiple ORDER BY" \
     "SELECT name FROM users ORDER BY name ASC, id DESC;"
 
+run_test "Aggregate expression GROUP BY" \
+    "SELECT SUM(amount) + 10 FROM orders GROUP BY user_id;"
+
 # ============================================================
 # Negative semantic tests
 # ============================================================
@@ -195,6 +198,10 @@ run_negative_test "Ungrouped column with expression" \
 run_negative_test "HAVING ungrouped column" \
     "SELECT name, COUNT(id) FROM users GROUP BY name HAVING email = 'x';" \
     "HAVING expression contains a column that must appear in GROUP BY or be used in an aggregate function."
+
+run_negative_test "Aggregate in GROUP BY" \
+    "SELECT COUNT(id) FROM users GROUP BY COUNT(id);" \
+    "GROUP BY expression cannot contain an aggregate function."
 
 # ============================================================
 # Summary
